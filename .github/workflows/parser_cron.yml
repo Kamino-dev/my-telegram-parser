@@ -4,7 +4,10 @@ on:
   schedule:
     # Автозапуск каждые 30 минут (24/7)
     - cron: '*/30 * * * *'
-  workflow_dispatch: # Кнопка ручного запуска на сайте
+  workflow_dispatch: # Кнопка ручного запуска на сайте GitHub
+
+permissions:
+  contents: write # Дает право серверу сохранять измененные файлы обратно в ваш репозиторий
 
 jobs:
   run-parser:
@@ -13,6 +16,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        persist-credentials: true
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -29,7 +34,13 @@ jobs:
         API_HASH: ${{ secrets.API_HASH }}
         BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         MY_CHAT_ID: ${{ secrets.MY_CHAT_ID }}
-      # Сначала заходим в папку new, а потом запускаем парсер!
       run: |
         cd new
         python test_tg_parser.py
+
+    - name: Commit and Push local changes (Logs/CSV)
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add new/*.csv new/*.session 2>/dev/null || true
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Автоматическое обновление логов и файлов сессии [skip ci]" && git push)
